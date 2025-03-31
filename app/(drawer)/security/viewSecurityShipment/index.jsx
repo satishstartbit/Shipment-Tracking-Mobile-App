@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, FlatList, StyleSheet, Dimensions, Text } from "react-native";
+import { View, FlatList, StyleSheet, Dimensions, Text, TouchableOpacity } from "react-native";
 import ShipmentCard from "../../../../components/ShipmentCard";
 import ShipmentDetailsSheet from "../../../../components/ShipmentDetailsSheet";
 import SearchBar from "../../../../components/SearchBar";
@@ -21,14 +21,14 @@ const shipments = [
   },
   {
     shipmentNumber: "SHP-1002",
-    status: "In Transit",
+    status: "In Transit", // Confirmed
     truckType: "Large",
     destination: { city: "Los Angeles", state: "CA" },
     expectedArrival: "2025-04-12T16:00:00Z",
   },
   {
     shipmentNumber: "SHP-1003",
-    status: "Delivered",
+    status: "Delivered", // Confirmed
     truckType: "Small",
     destination: { city: "Chicago", state: "IL" },
     expectedArrival: "2025-04-08T10:15:00Z",
@@ -42,11 +42,24 @@ const shipments = [
   },
 ];
 
-const AssignShipment = () => {
+const securityShipmentListScreen = () => {
   const [visible, setVisible] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
+
+  // Only show shipments with "Confirmed" status (In Transit or Delivered)
+  const filteredShipments = shipments.filter(
+    (shipment) =>
+      (shipment.status === "In Transit" || shipment.status === "Delivered") && // Filter for confirmed shipments
+      (shipment.shipmentNumber
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+        shipment.destination.city
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        shipment.status.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   const toggleBottomSheet = (shipment) => {
     setSelectedShipment(shipment);
@@ -63,29 +76,19 @@ const AssignShipment = () => {
     });
   };
 
-  // Filter shipments to show only "Planned" ones and search based on shipment number, city, or status
-  const filteredShipments = shipments.filter(
-    (shipment) =>
-      shipment.status.toLowerCase() === "planned" &&
-      (shipment.shipmentNumber
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-        shipment.destination.city
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        shipment.status.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  const handleAssignShipment = () => {
-    // Navigate to the create assign shipment page
-    router.push("/(drawer)/shipment/createAssignShiment");
+  const changeStatusToGateIn = () => {
+    // Change the status to "Gate In"
+    if (selectedShipment) {
+      selectedShipment.status = "Gate In"; // Update the status
+      setSelectedShipment({ ...selectedShipment }); // Force re-render
+      console.log(`Shipment ${selectedShipment.shipmentNumber} status changed to Gate In.`);
+    }
   };
 
   return (
     <View style={styles.container}>
       {/* Search Bar */}
       <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-
       {/* Shipment List */}
       <FlatList
         data={filteredShipments}
@@ -93,7 +96,7 @@ const AssignShipment = () => {
         renderItem={({ item }) => (
           <ShipmentCard
             item={item}
-            onPress={toggleBottomSheet}
+            onPress={() => toggleBottomSheet(item)}
             cardWidth={cardWidth}
             formatDateTime={formatDateTime}
           />
@@ -103,7 +106,7 @@ const AssignShipment = () => {
         numColumns={2}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No shipments found</Text>
+            <Text style={styles.emptyText}>No confirmed shipments found</Text>
           </View>
         }
       />
@@ -115,8 +118,11 @@ const AssignShipment = () => {
         onClose={() => setVisible(false)}
         formatDateTime={formatDateTime}
         isAssignShipment={true}
-        onAssign={handleAssignShipment}
+        title="Update Status"
+        onAssign={()=>router.navigate("/(drawer)/security/assignStatus")}
       />
+
+
     </View>
   );
 };
@@ -145,6 +151,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#6430B9CC",
   },
+  gateInContainer: {
+    position: "absolute",
+    bottom: 10,
+    left: 12,
+    right: 12,
+    marginTop: 20,
+  },
+  gateInButton: {
+    backgroundColor: "#6430B9CC",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  gateInButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
 });
 
-export default AssignShipment;
+export default securityShipmentListScreen;

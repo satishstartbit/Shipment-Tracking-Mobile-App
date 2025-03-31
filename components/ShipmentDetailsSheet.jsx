@@ -5,9 +5,10 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 // Status Colors Mapping
 const statusColors = {
-  Planned: "#FFC107",      // Yellow for planned shipments
-  "In Transit": "#D32F2F", // Red for shipments in transit
-  Delivered: "#4CAF50",    // Green for delivered shipments
+  Planned: "#FFC107",      
+  "In Transit": "#D32F2F", 
+  Delivered: "#4CAF50",    
+  Confirmed:"#000"
 };
 
 /**
@@ -18,8 +19,18 @@ const statusColors = {
  * @param {Function} onClose - Function to close the sheet
  * @param {Object} shipment - Shipment details object
  * @param {Function} formatDateTime - Function to format date/time
+ * @param {boolean} isAssignShipment - Determines if the button is for assigning shipment or viewing it
+ * @param {Function} onAssign - Function to trigger when assigning a shipment
  */
-const ShipmentDetailsSheet = ({ visible, onClose, shipment, formatDateTime }) => {
+const ShipmentDetailsSheet = ({
+  visible,
+  onClose,
+  shipment,
+  formatDateTime,
+  isAssignShipment = false,
+  onAssign,
+  title
+}) => {
   if (!shipment) return null;
 
   return (
@@ -71,10 +82,16 @@ const ShipmentDetailsSheet = ({ visible, onClose, shipment, formatDateTime }) =>
             </Text>
           </View>
 
-          {/* Close Button */}
-          <TouchableOpacity style={styles.actionButton} onPress={onClose}>
-            <Text style={styles.actionButtonText}>Close Details</Text>
-          </TouchableOpacity>
+          {/* Action Buttons */}
+          {isAssignShipment ? (
+            <TouchableOpacity style={styles.actionButton} onPress={onAssign}>
+              <Text style={styles.actionButtonText}>{title|| "Assign Shipment"}</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.actionButton} onPress={onClose}>
+              <Text style={styles.actionButtonText}>Close Details</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </BottomSheet>
@@ -97,6 +114,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
     paddingBottom: 12,
+    marginTop:5
   },
   sheetTitle: {
     fontSize: 18,
@@ -113,6 +131,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop:5
   },
   shipmentNumberLarge: {
     fontSize: 18,

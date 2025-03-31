@@ -8,17 +8,10 @@ export default function shipmentLayout() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="createShipment/index"
+        name="assignTruck/index"
         options={{ headerShown: false }}
       />
-      <Stack.Screen
-        name="assignShipment/index"
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="createAssignShiment/index"
-        options={{ headerShown: false }}
-      />
+  
     </Stack>
   );
 }

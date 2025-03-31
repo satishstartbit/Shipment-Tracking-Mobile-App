@@ -1,10 +1,6 @@
 import React from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-} from "react-native";
+import { View, Text, TextInput, StyleSheet } from "react-native";
+
 
 /**
  * Input - A reusable text input component with a label and error handling.
@@ -17,7 +13,7 @@ import {
  * @param {object} inputStyle - Custom styles for the text input field.
  * @param {string} error - Error message to display below the input field.
  */
-export const Input = ({
+export const InputComponent = ({
   label,
   placeholder,
   secureTextEntry,
@@ -25,20 +21,27 @@ export const Input = ({
   labelStyle,
   inputStyle,
   error,
+  editable = true,
+  selectTextOnFocus=true,
+  onChangeText
 }) => {
+  console.log("hhh",onChangeText)
   return (
     <View style={containerStyle || styles.inputContainer}>
       {/* Label for the input field */}
       <Text style={labelStyle || styles.label}>{label}</Text>
-      
+
       {/* Text input field */}
       <TextInput
         style={[styles.input, inputStyle, error ? styles.inputError : null]}
         placeholder={placeholder}
         placeholderTextColor="#555" // Light gray placeholder color
         secureTextEntry={secureTextEntry} // Hides text if true (for passwords)
+        editable={editable} 
+        selectTextOnFocus={selectTextOnFocus}
+        onChangeText={onChangeText}
       />
-      
+
       {/* Display error message if present */}
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>

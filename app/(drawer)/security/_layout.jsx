@@ -1,24 +1,24 @@
 import { Stack } from "expo-router";
 
-export default function shipmentLayout() {
+export default function securityLayout() {
   return (
     <Stack>
       <Stack.Screen
-        name="viewShipment/index"
+        name="viewSecurityShipment/index"
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="createShipment/index"
+        name="assignStatus/index"
         options={{ headerShown: false }}
       />
-      <Stack.Screen
+      {/* <Stack.Screen
         name="assignShipment/index"
         options={{ headerShown: false }}
-      />
-      <Stack.Screen
+      /> */}
+      {/* <Stack.Screen
         name="createAssignShiment/index"
         options={{ headerShown: false }}
-      />
+      /> */}
     </Stack>
   );
 }

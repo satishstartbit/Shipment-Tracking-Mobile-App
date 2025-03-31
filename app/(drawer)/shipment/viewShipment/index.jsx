@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { View, FlatList, StyleSheet, Dimensions, Text } from "react-native";
-import ShipmentCard from "../../../../components/shipmentCard";
+import ShipmentCard from "../../../../components/ShipmentCard";
 import ShipmentDetailsSheet from "../../../../components/ShipmentDetailsSheet";
-import SearchBar from "../../../../components/searchBar";
+import SearchBar from "../../../../components/SearchBar";
 import CreateShipmentButton from "../../../../components/CreateShipmentButton";
-
+import { useRouter } from "expo-router";
 // Calculate card width based on screen size
 const screenWidth = Dimensions.get("window").width;
 const cardWidth = (screenWidth - 32) / 2 - 8;
@@ -41,10 +41,11 @@ const shipments = [
   },
 ];
 
-const ShipmentListScreen = ({ navigation }) => {
+const ShipmentListScreen = () => {
   const [visible, setVisible] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
 
   const toggleBottomSheet = (shipment) => {
     setSelectedShipment(shipment);
@@ -79,7 +80,7 @@ const ShipmentListScreen = ({ navigation }) => {
       {/* Search Bar */}
       <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
       <CreateShipmentButton
-        onPress={() => navigation.navigate("CreateShipment")}
+        onPress={() => router.navigate("/(drawer)/shipment/createShipment")}
       />
       {/* Shipment List */}
       <FlatList

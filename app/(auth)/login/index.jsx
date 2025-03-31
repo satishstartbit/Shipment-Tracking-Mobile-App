@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Image, Alert } from "react-native";
-import { Input } from "../../../components/input";
-import { ButtonComponent } from "../../../components/button";
+import { InputComponent } from "../../../components/InputComponent";
+import { ButtonComponent } from "../../../components/ButtonComponent";
 import { Stack } from "expo-router";
 import { useRouter } from "expo-router";
+import { useAuth } from "../../../context/authContext";
 
 const LoginScreen = () => {
   const router = useRouter(); // Used for navigation
@@ -19,9 +20,12 @@ const LoginScreen = () => {
     username: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false);
+  const { onLogin } = useAuth();
 
   // Function to handle input changes and update the state
   const handleInputChange = (field, value) => {
+    console.log("ff", field, value);
     setFormData({
       ...formData,
       [field]: value,
@@ -64,9 +68,16 @@ const LoginScreen = () => {
   };
 
   // Function to handle form submission
-  const handleSubmit = () => {
-    console.log("Logging in...");
-    router.replace("/shipment/viewShipment"); // Navigate to the shipment view page
+  const handleSubmit = async () => {
+    console.log("kk", formData);
+    setLoading(true); // Start loading
+    try {
+      await onLogin(formData.username, formData.password);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false); // Stop loading
+    }
   };
 
   return (
@@ -88,7 +99,7 @@ const LoginScreen = () => {
         </Text>
 
         {/* Username Input Field */}
-        <Input
+        <InputComponent
           label={"Username"}
           placeholder="Enter Username"
           value={formData.username}
@@ -96,7 +107,6 @@ const LoginScreen = () => {
           containerStyle={styles.inputContainer}
           labelStyle={styles.label}
           inputStyle={styles.input}
-          error={errors.username} // Displays error message if validation fails
         />
 
         {/* Display username error message */}
@@ -105,7 +115,7 @@ const LoginScreen = () => {
         )}
 
         {/* Password Input Field */}
-        <Input
+        <InputComponent
           label={"Password"}
           placeholder="Enter Password"
           value={formData.password}
@@ -114,7 +124,6 @@ const LoginScreen = () => {
           labelStyle={styles.label}
           inputStyle={styles.input}
           secureTextEntry={true} // Hides password text
-          error={errors.password} // Displays error message if validation fails
         />
 
         {/* Display password error message */}
@@ -128,6 +137,7 @@ const LoginScreen = () => {
           onPress={handleSubmit}
           button={styles.loginButton}
           buttonText={styles.loginButtonText}
+          loading={loading}
         />
 
         {/* Terms and Conditions */}

@@ -7,13 +7,13 @@ import { MaterialIcons } from "@expo/vector-icons";
  *
  * @param {function} onPress - Function to execute when the button is pressed.
  */
-const CreateShipmentButton = ({ onPress }) => {
+const CreateShipmentButton = ({ onPress,text }) => {
   return (
     <View style={styles.container}>
       {/* Button with icon and text */}
       <TouchableOpacity style={styles.createButton} onPress={onPress}>
         <MaterialIcons name="add" size={24} color="white" /> 
-        <Text style={styles.createButtonText}>Create Shipment</Text>
+        <Text style={styles.createButtonText}>{text || "Create Shipment"}</Text>
       </TouchableOpacity>
     </View>
   );

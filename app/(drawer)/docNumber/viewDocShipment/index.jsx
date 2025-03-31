@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, FlatList, StyleSheet, Dimensions, Text } from "react-native";
+import { View, FlatList, StyleSheet, Dimensions, Text, Button } from "react-native";
 import ShipmentCard from "../../../../components/ShipmentCard";
 import ShipmentDetailsSheet from "../../../../components/ShipmentDetailsSheet";
 import SearchBar from "../../../../components/SearchBar";
@@ -14,7 +14,7 @@ const cardWidth = (screenWidth - 32) / 2 - 8;
 const shipments = [
   {
     shipmentNumber: "SHP-1001",
-    status: "Planned",
+    status: "Gate-In",
     truckType: "Medium",
     destination: { city: "New York", state: "NY" },
     expectedArrival: "2025-04-10T14:30:00Z",
@@ -28,21 +28,21 @@ const shipments = [
   },
   {
     shipmentNumber: "SHP-1003",
-    status: "Delivered",
+    status: "Gate-In",
     truckType: "Small",
     destination: { city: "Chicago", state: "IL" },
     expectedArrival: "2025-04-08T10:15:00Z",
   },
   {
     shipmentNumber: "SHP-1004",
-    status: "Planned",
+    status: "Gate-In",
     truckType: "Large",
     destination: { city: "Houston", state: "TX" },
     expectedArrival: "2025-04-15T09:00:00Z",
   },
 ];
 
-const AssignShipment = () => {
+const docShipmentListScreen = () => {
   const [visible, setVisible] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,10 +63,10 @@ const AssignShipment = () => {
     });
   };
 
-  // Filter shipments to show only "Planned" ones and search based on shipment number, city, or status
+  // Filter only Gate-In status shipments
   const filteredShipments = shipments.filter(
     (shipment) =>
-      shipment.status.toLowerCase() === "planned" &&
+      (shipment.status === "Gate-In") && // Filter by Gate-In status
       (shipment.shipmentNumber
         .toLowerCase()
         .includes(searchQuery.toLowerCase()) ||
@@ -76,9 +76,10 @@ const AssignShipment = () => {
         shipment.status.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const handleAssignShipment = () => {
-    // Navigate to the create assign shipment page
-    router.push("/(drawer)/shipment/createAssignShiment");
+  const handleAssignDoc = () => {
+    // Logic to assign the document number
+    console.log("Assigning Doc Number for shipment:", selectedShipment.shipmentNumber);
+    router.navigate("/(drawer)/docNumber/assignDocNumber")
   };
 
   return (
@@ -93,7 +94,7 @@ const AssignShipment = () => {
         renderItem={({ item }) => (
           <ShipmentCard
             item={item}
-            onPress={toggleBottomSheet}
+            onPress={() => toggleBottomSheet(item)}
             cardWidth={cardWidth}
             formatDateTime={formatDateTime}
           />
@@ -114,9 +115,12 @@ const AssignShipment = () => {
         shipment={selectedShipment}
         onClose={() => setVisible(false)}
         formatDateTime={formatDateTime}
+        title="Assign Doc Number"
         isAssignShipment={true}
-        onAssign={handleAssignShipment}
+        onAssign={handleAssignDoc}
       />
+ 
+
     </View>
   );
 };
@@ -147,4 +151,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AssignShipment;
+export default docShipmentListScreen;

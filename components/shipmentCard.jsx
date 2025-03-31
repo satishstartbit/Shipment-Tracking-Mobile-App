@@ -4,10 +4,12 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 // Status Colors Mapping
 const statusColors = {
-  Planned: "#FFC107",      // Yellow for planned shipments
-  "In Transit": "#D32F2F", // Red for shipments in transit
-  Delivered: "#4CAF50",    // Green for delivered shipments
-};
+  Planned: "#FFC107", 
+  "In Transit": "#D32F2F", 
+  Delivered: "#4CAF50",
+  "Gate-In": "#0000FF",
+  Confirmed: "#000", 
+}
 
 /**
  * ShipmentCard Component
@@ -20,7 +22,7 @@ const statusColors = {
  */
 const ShipmentCard = ({ item, onPress, cardWidth, formatDateTime }) => {
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.card, { width: cardWidth }]}
       onPress={() => onPress(item)}
     >
@@ -29,8 +31,8 @@ const ShipmentCard = ({ item, onPress, cardWidth, formatDateTime }) => {
         <Text style={styles.shipmentNumber}>{item.shipmentNumber}</Text>
         <View
           style={[
-            styles.statusBadge, 
-            { backgroundColor: statusColors[item.status] } // Dynamic status color
+            styles.statusBadge,
+            { backgroundColor: statusColors[item.status] }, // Dynamic status color
           ]}
         >
           <Text style={styles.statusText}>{item.status}</Text>
@@ -52,7 +54,9 @@ const ShipmentCard = ({ item, onPress, cardWidth, formatDateTime }) => {
         {/* Expected Arrival Time */}
         <View style={styles.infoRow}>
           <MaterialIcons name="access-time" size={16} color="#6430B9CC" />
-          <Text style={styles.infoText}>{formatDateTime(item.expectedArrival)}</Text>
+          <Text style={styles.infoText}>
+            {formatDateTime(item.expectedArrival)}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>

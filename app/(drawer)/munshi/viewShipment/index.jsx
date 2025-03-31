@@ -3,7 +3,6 @@ import { View, FlatList, StyleSheet, Dimensions, Text } from "react-native";
 import ShipmentCard from "../../../../components/ShipmentCard";
 import ShipmentDetailsSheet from "../../../../components/ShipmentDetailsSheet";
 import SearchBar from "../../../../components/SearchBar";
-import CreateShipmentButton from "../../../../components/CreateShipmentButton";
 import { useRouter } from "expo-router";
 
 // Calculate card width based on screen size
@@ -14,35 +13,28 @@ const cardWidth = (screenWidth - 32) / 2 - 8;
 const shipments = [
   {
     shipmentNumber: "SHP-1001",
-    status: "Planned",
+    status: "Confirmed",
     truckType: "Medium",
     destination: { city: "New York", state: "NY" },
     expectedArrival: "2025-04-10T14:30:00Z",
   },
   {
     shipmentNumber: "SHP-1002",
-    status: "In Transit",
+    status: "Confirmed",
     truckType: "Large",
     destination: { city: "Los Angeles", state: "CA" },
     expectedArrival: "2025-04-12T16:00:00Z",
   },
   {
     shipmentNumber: "SHP-1003",
-    status: "Delivered",
+    status: "Confirmed",
     truckType: "Small",
-    destination: { city: "Chicago", state: "IL" },
+    destination: { city: "Chicago123", state: "IL" },
     expectedArrival: "2025-04-08T10:15:00Z",
-  },
-  {
-    shipmentNumber: "SHP-1004",
-    status: "Planned",
-    truckType: "Large",
-    destination: { city: "Houston", state: "TX" },
-    expectedArrival: "2025-04-15T09:00:00Z",
   },
 ];
 
-const AssignShipment = () => {
+const ShipmentListScreen = () => {
   const [visible, setVisible] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,22 +55,18 @@ const AssignShipment = () => {
     });
   };
 
-  // Filter shipments to show only "Planned" ones and search based on shipment number, city, or status
+  // Search based on shipment number, city, and status
   const filteredShipments = shipments.filter(
     (shipment) =>
-      shipment.status.toLowerCase() === "planned" &&
-      (shipment.shipmentNumber
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-        shipment.destination.city
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
+      shipment.status === "Confirmed" &&
+      (shipment.shipmentNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        shipment.destination.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
         shipment.status.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleAssignShipment = () => {
     // Navigate to the create assign shipment page
-    router.push("/(drawer)/shipment/createAssignShiment");
+    router.push("/(drawer)/munshi/assignTruck");
   };
 
   return (
@@ -103,7 +91,7 @@ const AssignShipment = () => {
         numColumns={2}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No shipments found</Text>
+            <Text style={styles.emptyText}>No confirmed shipments found</Text>
           </View>
         }
       />
@@ -116,6 +104,7 @@ const AssignShipment = () => {
         formatDateTime={formatDateTime}
         isAssignShipment={true}
         onAssign={handleAssignShipment}
+        title={"Assign Truck"}
       />
     </View>
   );
@@ -147,4 +136,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AssignShipment;
+export default ShipmentListScreen;
