@@ -25,7 +25,7 @@ export const InputComponent = ({
   selectTextOnFocus=true,
   onChangeText
 }) => {
-  console.log("hhh",onChangeText)
+
   return (
     <View style={containerStyle || styles.inputContainer}>
       {/* Label for the input field */}

@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import * as SecureStore from "expo-secure-store";
-import Toast from 'react-native-root-toast';
+import Toast from "react-native-root-toast";
 
 const BASE_URL = "https://shipment-tracking-backend.vercel.app";
 
@@ -16,56 +16,59 @@ export const useApi = () => {
    * @param {boolean} authRequired - If true, includes the auth token.
    * @returns {Promise<any>} - Returns the API response.
    */
-  const apiRequest = useCallback(async (endpoint, method = "GET", body = null, authRequired = true) => {
-    setLoading(true);
-    setError(null);
+  const apiRequest = useCallback(
+    async (endpoint, method = "GET", body = null, authRequired = true) => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      let headers = {
-        "Content-Type": "application/json",
-      };
+      try {
+        let headers = {
+          "Content-Type": "application/json",
+        };
 
-      if (authRequired) {
-        console.log("in")
-        const token = await SecureStore.getItemAsync("authToken");
-        console.log("log....",token)
-        if (token) {
-          headers["authorization"] = `${token}`;
-          console.log("hheder",headers)
+        if (authRequired) {
+          console.log("in");
+          const token = await SecureStore.getItemAsync("authToken");
+          console.log("log....", token);
+          if (token) {
+            headers["authorization"] = `${token}`;
+            console.log("hheder", headers);
+          }
         }
+
+        const response = await fetch(`${BASE_URL}${endpoint}`, {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : null,
+        });
+
+        const data = await response.json();
+        console.log("datttt", data);
+
+        if (!response.ok) {
+          throw new Error(data.message || "Request failed");
+        }
+
+        return data;
+      } catch (err) {
+        Toast.show(err.message, {
+          duration: Toast.durations.SHORT,
+          position: Toast.positions.CENTER,
+          backgroundColor: "red",
+          textColor: "white",
+          shadow: true,
+          animation: true,
+        });
+        setError(err.message);
+        console.error(`API Error [${method} ${endpoint}]:`, err.message);
+        throw err;
+      } finally {
+        setLoading(false);
       }
-
-      const response = await fetch(`${BASE_URL}${endpoint}`, {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : null,
-      });
-
-      const data = await response.json();
-      console.log("datttt",data)
-
-      if (!response.ok) {
-        throw new Error(data.message || "Request failed");
-      }
-
-
-      return data;
-    } catch (err) {
-          Toast.show(err.message, {
-                 duration: Toast.durations.SHORT,
-                 position: Toast.positions.CENTER,
-                 backgroundColor: 'red', 
-                 textColor: 'white', 
-                 shadow: true, 
-                 animation: true
-               });
-      setError(err.message);
-      console.error(`API Error [${method} ${endpoint}]:`, err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   return { apiRequest, loading, error };
 };
+

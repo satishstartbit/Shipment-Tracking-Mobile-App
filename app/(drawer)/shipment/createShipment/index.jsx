@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet, Alert } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -7,19 +7,14 @@ import { PaperProvider } from "react-native-paper";
 import { useRouter } from "expo-router";
 import DropdownSelector from "../../../../components/DropdownSelector";
 import { ButtonComponent } from "../../../../components/ButtonComponent";
-import { useApi } from "../../../../hooks/useApi"; // Import the API hook
+import { useApi } from "../../../../hooks/useApi";
+import * as SecureStore from "expo-secure-store";
 
 // Validation Schema
 const shipmentSchema = yup.object().shape({
   truckType: yup.string().required("Truck type is required"),
   destinationCity: yup.string().required("Destination city is required"),
 });
-
-const truckTypes = [
-  { label: "Small", value: "Small" },
-  { label: "Medium", value: "Medium" },
-  { label: "Large", value: "Large" },
-];
 
 const cities = [
   { label: "New York", value: "New York" },
@@ -29,7 +24,10 @@ const cities = [
 
 const CreateShipmentScreen = () => {
   const router = useRouter();
-  const { apiRequest, loading } = useApi(); // Use API hook
+  const { apiRequest, loading } = useApi();
+  const [truckTypes, setTruckTypes] = useState([]);
+  const [loadingTrucks, setLoadingTrucks] = useState(true);
+
   const {
     control,
     handleSubmit,
@@ -40,17 +38,52 @@ const CreateShipmentScreen = () => {
     defaultValues: { shipmentStatus: "new" },
   });
 
+  // Fetch truck types
+  useEffect(() => {
+    const fetchTruckTypes = async () => {
+      try {
+        const response = await apiRequest(
+          "/shipment/getalltrucktype",
+          "GET",
+          null,
+          false
+        );
+        console.log("r30", response);
+        if (response) {
+          const formattedTrucks = response.truckTypes.map((truck) => ({
+            label: truck.name,
+            value: truck._id,
+          }));
+          console.log("formattedTrucks", formattedTrucks);
+          setTruckTypes(formattedTrucks);
+        }
+      } catch (error) {
+        console.error("Error fetching truck types:", error);
+      } finally {
+        setLoadingTrucks(false);
+      }
+    };
+
+    fetchTruckTypes();
+  }, []);
+
   const onSubmit = async (data) => {
     try {
       const payload = {
-        shipment_status: "new",
+        shipment_status: "planned",
         destination_city: data.destinationCity,
         truck_type: data.truckType,
-        userid: "67e636d91a69d6a4496df0db", // Change this dynamically if needed
+        userid: await SecureStore.getItemAsync("uid"),
       };
 
-      const response = await apiRequest("/shipment/createshipment", "POST", payload);
-      console.log("cRE",response)
+      console.log("payload", payload);
+
+      const response = await apiRequest(
+        "/shipment/createshipment",
+        "POST",
+        payload
+      );
+      console.log("cRE", response);
       Alert.alert("Success", "Shipment created successfully!");
       router.push("/shipment/viewShipment");
     } catch (error) {
@@ -71,19 +104,35 @@ const CreateShipmentScreen = () => {
         </View>
 
         {/* Truck Type Dropdown */}
-        <Controller
-          control={control}
-          name="truckType"
-          render={({ field: { value } }) => (
-            <DropdownSelector
-              label="Truck Type"
-              options={truckTypes}
-              value={value}
-              setValue={(val) => setValue("truckType", val)}
-              error={errors.truckType?.message}
-            />
-          )}
-        />
+        {loadingTrucks ? (
+          <ActivityIndicator size="small" color="#E53935" />
+        ) : (
+          <Controller
+            control={control}
+            name="truckType"
+            render={({ field: { value, onChange } }) => {
+              // Find the selected truck name based on its ID
+              const selectedTruck = truckTypes.find(
+                (truck) => truck.value === value
+              );
+
+              return (
+                <DropdownSelector
+                  label="Truck Type"
+                  options={truckTypes}
+                  value={selectedTruck ? selectedTruck.label : ""}
+                  setValue={(val) => {
+                    const selectedTruck = truckTypes.find(
+                      (truck) => truck.label === val
+                    );
+                    onChange(selectedTruck ? selectedTruck.value : val);
+                  }}
+                  error={errors.truckType?.message}
+                />
+              );
+            }}
+          />
+        )}
 
         {/* Destination City Dropdown */}
         <Controller
@@ -99,14 +148,6 @@ const CreateShipmentScreen = () => {
             />
           )}
         />
-
-        {/* Read-Only Shipment Status */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Shipment Status</Text>
-          <View style={styles.readonlyInput}>
-            <Text style={styles.selectedText}>Planned</Text>
-          </View>
-        </View>
 
         {/* Submit Button */}
         <ButtonComponent

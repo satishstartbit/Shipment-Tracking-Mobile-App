@@ -31,12 +31,20 @@ const SplashScreen = () => {
 
       const token = await SecureStore.getItemAsync("authToken");
       const role = await SecureStore.getItemAsync("uRole");
+      const uid = await SecureStore.getItemAsync("uid");
    
-      if (token && role) {
+      if (token && role && uid) {
         const decoded = jwtDecode(token);
         const currentTime = Math.floor(Date.now() / 1000);
   
         if(decoded.exp < currentTime){
+          const removeDataStore=async()=>{
+                await SecureStore.deleteItemAsync("authToken");
+                await SecureStore.deleteItemAsync("uRole");
+                await SecureStore.deleteItemAsync("uid");
+
+          }
+          removeDataStore();
           router.replace("/(auth)/login");
         }
         router.replace("/(drawer)");

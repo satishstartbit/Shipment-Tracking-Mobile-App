@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Image, Alert } from "react-native";
+import { View, Text, StyleSheet, Image, Alert ,ToastAndroid } from "react-native";
 import { InputComponent } from "../../../components/InputComponent";
 import { ButtonComponent } from "../../../components/ButtonComponent";
 import { Stack } from "expo-router";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../../context/authContext";
+import Toast from "react-native-toast-message";
 
 const LoginScreen = () => {
   const router = useRouter(); // Used for navigation
@@ -25,7 +26,11 @@ const LoginScreen = () => {
 
   // Function to handle input changes and update the state
   const handleInputChange = (field, value) => {
-    console.log("ff", field, value);
+    // If the field is 'username', convert it to lowercase
+    if (field === "username") {
+      value = value.toLowerCase();
+    }
+
     setFormData({
       ...formData,
       [field]: value,
@@ -44,16 +49,13 @@ const LoginScreen = () => {
   const validateForm = () => {
     let valid = true;
     const newErrors = { username: "", password: "" };
-
+  
     // Username validation
-    if (!formData.username.trim()) {
-      newErrors.username = "Username is required";
-      valid = false;
-    } else if (formData.username.length < 4) {
+    if (formData.username.trim().length < 3) {
       newErrors.username = "Username must be at least 4 characters";
       valid = false;
     }
-
+  
     // Password validation
     if (!formData.password) {
       newErrors.password = "Password is required";
@@ -62,19 +64,24 @@ const LoginScreen = () => {
       newErrors.password = "Password must be at least 6 characters";
       valid = false;
     }
-
+  
     setErrors(newErrors);
     return valid;
   };
-
+  
   // Function to handle form submission
   const handleSubmit = async () => {
-    console.log("kk", formData);
+    // Validate form before proceeding
+    if (!validateForm()) {
+      return; // If validation fails, stop the form submission
+    }
+
     setLoading(true); // Start loading
     try {
       await onLogin(formData.username, formData.password);
     } catch (error) {
       console.error(error);
+      ToastAndroid.show('Login Failed', ToastAndroid.LONG);
     } finally {
       setLoading(false); // Stop loading
     }

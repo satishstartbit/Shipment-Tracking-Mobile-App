@@ -16,7 +16,7 @@ export default function shipmentLayout() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="createAssignShiment/index"
+        name="createAssignShiment/[id]"
         options={{ headerShown: false }}
       />
     </Stack>

@@ -1,51 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, FlatList, StyleSheet, Dimensions, Text } from "react-native";
 import ShipmentCard from "../../../../components/ShipmentCard";
 import ShipmentDetailsSheet from "../../../../components/ShipmentDetailsSheet";
 import SearchBar from "../../../../components/SearchBar";
 import CreateShipmentButton from "../../../../components/CreateShipmentButton";
 import { useRouter } from "expo-router";
+import { useApi } from "../../../../hooks/useApi";
+
 // Calculate card width based on screen size
 const screenWidth = Dimensions.get("window").width;
 const cardWidth = (screenWidth - 32) / 2 - 8;
-
-// Sample Shipment Data
-const shipments = [
-  {
-    shipmentNumber: "SHP-1001",
-    status: "Planned",
-    truckType: "Medium",
-    destination: { city: "New York", state: "NY" },
-    expectedArrival: "2025-04-10T14:30:00Z",
-  },
-  {
-    shipmentNumber: "SHP-1002",
-    status: "In Transit",
-    truckType: "Large",
-    destination: { city: "Los Angeles", state: "CA" },
-    expectedArrival: "2025-04-12T16:00:00Z",
-  },
-  {
-    shipmentNumber: "SHP-1003",
-    status: "Delivered",
-    truckType: "Small",
-    destination: { city: "Chicago", state: "IL" },
-    expectedArrival: "2025-04-08T10:15:00Z",
-  },
-  {
-    shipmentNumber: "SHP-1004",
-    status: "Planned",
-    truckType: "Large",
-    destination: { city: "Houston", state: "TX" },
-    expectedArrival: "2025-04-15T09:00:00Z",
-  },
-];
 
 const ShipmentListScreen = () => {
   const [visible, setVisible] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [shipments, setShipments] = useState([]);
+  const [pageNo, setPageNo] = useState(1); // Track the current page
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const { apiRequest } = useApi();
 
   const toggleBottomSheet = (shipment) => {
     setSelectedShipment(shipment);
@@ -62,18 +37,76 @@ const ShipmentListScreen = () => {
     });
   };
 
-  //search based on shipment number , city and status
+  // Function to fetch data
+  const fetchShipments = async () => {
+    try {
+      setLoading(true);
+      const body = {
+        page_size: 15,
+        page_no: 1,
+        search: "",
+        order: "asc",
+        slug: "logistic_person",
+        userid: "67e636d91a69d6a4496df0db",
+      };
+      console.log("body", body);
+      const response = await apiRequest(
+        "/shipment/getallshipment",
+        "POST",
+        body
+      );
+      const data = response.shipments; // Access the shipments array from the response
 
-  const filteredShipments = shipments.filter(
-    (shipment) =>
-      shipment.shipmentNumber
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      shipment.destination.city
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      shipment.status.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      console.log("dataaa", data);
+      // If this is the first page, reset the shipments array
+      if (data && pageNo == 1) {
+        setShipments(data); // Fallback to empty array if data is undefined
+      } else {
+        setShipments((prevShipments) => [...prevShipments, ...data]);
+      }
+    } catch (err) {
+      console.error("Error fetching shipments:", err);
+      setShipments([]); // Reset to empty array on error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchShipments(); // Initial load
+  }, [pageNo]); // Fetch data when pageNo changes
+
+  // Handle search query change
+  const filteredShipments = shipments.filter((shipment) => {
+    if (!shipment) return false; // Skip if shipment is null/undefined
+
+    const searchTerm = searchQuery.toLowerCase();
+
+    // Check shipment number
+    if (shipment.shipment_number?.toLowerCase().includes(searchTerm)) {
+      return true;
+    }
+
+    // Check destination city
+    if (shipment.destination_city?.toLowerCase().includes(searchTerm)) {
+      return true;
+    }
+
+    // Check shipment status
+    if (shipment.shipment_status?.toLowerCase().includes(searchTerm)) {
+      return true;
+    }
+
+    return false; // No match found
+  });
+
+  const loadMoreData = () => {
+    if (!loading) {
+      console.log("hii");
+    }
+  };
+
+  console.log("shipments", filteredShipments);
 
   return (
     <View style={styles.container}>
@@ -85,7 +118,7 @@ const ShipmentListScreen = () => {
       {/* Shipment List */}
       <FlatList
         data={filteredShipments}
-        keyExtractor={(item) => item.shipmentNumber}
+        keyExtractor={(item) => item.shipment_number}
         renderItem={({ item }) => (
           <ShipmentCard
             item={item}
@@ -98,14 +131,22 @@ const ShipmentListScreen = () => {
         columnWrapperStyle={styles.columnWrapper}
         numColumns={2}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No shipments found</Text>
-          </View>
+          !loading ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No shipments found</Text>
+            </View>
+          ) : null
+        }
+        onEndReached={loadMoreData} // Trigger when user reaches the bottom
+        onEndReachedThreshold={0.5} // Trigger when the user is 50% away from the bottom
+        ListFooterComponent={
+          loading && shipments.length > 0 ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading...</Text>
+            </View>
+          ) : null
         }
       />
-
-
-
 
       {/* Bottom Sheet for Shipment Details */}
       <ShipmentDetailsSheet
@@ -122,7 +163,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F9F6F2",
-    paddingBottom: 80, // Space for the create button
+    paddingBottom: 0, // Space for the create button
   },
   listContent: {
     paddingHorizontal: 12,
@@ -140,6 +181,13 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
+    color: "#6430B9CC",
+  },
+  loadingContainer: {
+    padding: 10,
+    alignItems: "center",
+  },
+  loadingText: {
     color: "#6430B9CC",
   },
 });

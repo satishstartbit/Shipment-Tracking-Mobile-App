@@ -24,7 +24,8 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute', // Keeps the button floating
     right: 10, // Position it towards the right
-    bottom: 40, // Position it above the bottom edge
+    bottom: 10, // Position it above the bottom edge
+    zIndex:9999
   },
   createButton: {
     backgroundColor: "#6430B9CC", // Button background color

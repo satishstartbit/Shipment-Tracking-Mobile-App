@@ -4,12 +4,12 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 // Status Colors Mapping
 const statusColors = {
-  Planned: "#FFC107", 
-  "In Transit": "#D32F2F", 
-  Delivered: "#4CAF50",
+  new: "#FFC107",
+  "planned": "#D32F2F",
+  Assigned: "#4CAF50",
   "Gate-In": "#0000FF",
-  Confirmed: "#000", 
-}
+  Confirmed: "#000",
+};
 
 /**
  * ShipmentCard Component
@@ -28,14 +28,23 @@ const ShipmentCard = ({ item, onPress, cardWidth, formatDateTime }) => {
     >
       {/* Header Section: Shipment Number & Status Badge */}
       <View style={styles.cardHeader}>
-        <Text style={styles.shipmentNumber}>{item.shipmentNumber}</Text>
+        <Text style={styles.shipmentNumber}>
+          {(item.shipmentNumber || item.shipment_number)?.length > 4
+            ? (item.shipmentNumber || item.shipment_number).slice(0, 7) + "..."
+            : item.shipmentNumber || item.shipment_number}
+        </Text>
         <View
           style={[
             styles.statusBadge,
-            { backgroundColor: statusColors[item.status] }, // Dynamic status color
+            {
+              backgroundColor:
+                statusColors[item.status || item.shipment_status],
+            }, // Dynamic status color
           ]}
         >
-          <Text style={styles.statusText}>{item.status}</Text>
+          <Text style={styles.statusText}>
+            {item.status || item.shipment_status}
+          </Text>
         </View>
       </View>
 
@@ -44,18 +53,24 @@ const ShipmentCard = ({ item, onPress, cardWidth, formatDateTime }) => {
         {/* Truck Type */}
         <View style={styles.infoRow}>
           <MaterialIcons name="local-shipping" size={16} color="#6430B9CC" />
-          <Text style={styles.infoText}>{item.truckType}</Text>
+          <Text style={styles.infoText}>
+            {(item.truckType || item.truckTypeId.name)?.length > 10
+              ? (item.truckType || item.truckTypeId.name).slice(0, 10) + "..."
+              : item.truckType || item.truckTypeId.name}
+          </Text>
         </View>
         {/* Destination */}
         <View style={styles.infoRow}>
           <MaterialIcons name="place" size={16} color="#6430B9CC" />
-          <Text style={styles.infoText}>{item.destination.city}</Text>
+          <Text style={styles.infoText}>
+            {item.destination_city || item.destination.city}
+          </Text>
         </View>
         {/* Expected Arrival Time */}
         <View style={styles.infoRow}>
           <MaterialIcons name="access-time" size={16} color="#6430B9CC" />
           <Text style={styles.infoText}>
-            {formatDateTime(item.expectedArrival)}
+            {formatDateTime(item.actual_arrival_date) || " "}
           </Text>
         </View>
       </View>

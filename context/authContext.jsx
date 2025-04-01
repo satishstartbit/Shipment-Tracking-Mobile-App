@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useApi } from "../hooks/useApi";
 import * as SecureStore from "expo-secure-store";
 import Toast from 'react-native-root-toast';
@@ -23,6 +23,37 @@ export const AuthProvider = ({ children }) => {
     username: null,
     role: null,
   });
+
+  const checkToken = async () => {
+    try {
+      const storedToken = await SecureStore.getItemAsync("authToken");
+
+      if (!storedToken) {
+        router.replace("/(auth)/login");
+        return;
+      }
+
+      const decoded = jwtDecode(storedToken);
+      const currentTime = Math.floor(Date.now() / 1000);
+
+      if (decoded.exp < currentTime) {
+        console.log("Token expired. Logging out...");
+        await SecureStore.deleteItemAsync("authToken");
+        await SecureStore.deleteItemAsync("uRole");
+        await SecureStore.deleteItemAsync("uid");
+        router.replace("/(auth)/login");
+      } else {
+        setUser(decoded);
+      }
+    } catch (error) {
+      console.error("Error checking token:", error);
+      router.replace("/(auth)/login");
+    }
+  };
+
+  useEffect(() => {
+    checkToken();
+  }, []);
 
   const login = async (username, password) => {
     try {
@@ -54,7 +85,7 @@ export const AuthProvider = ({ children }) => {
 
       await SecureStore.setItemAsync("authToken", response.accessToken);
       await SecureStore.setItemAsync("uRole",response.roles.slug);
-
+      await SecureStore.setItemAsync("uid",response.user._id);
       // console.log("data true",data)
 
       // Check user role from API response
@@ -65,23 +96,23 @@ export const AuthProvider = ({ children }) => {
           username: username,
           role: Role.ADMIN,
         });
-        router.replace("/(drawer)");
-      } else if (response.roles.slug === "munshi") {
+        router.replace("/(drawer)/security/viewSecurityShipment");
+      } else if (response.roles.slug === "Munshi") {
         console.log("User logged in");
         setAuthState({
           authenticated: true,
           username: username,
           role: Role.USER,
         });
-        router.replace("/(drawer)/munshi");
-      } else if (response.roles.slug === "logistic") {
+        router.replace("/(drawer)/munshi/viewShipment");
+      } else if (response.roles.slug === "logistic_person") {
         console.log("logistic logged in");
         setAuthState({
           authenticated: true,
           username: username,
           role: Role.USER,
         });
-        router.replace("/(drawer)/shipment");
+        router.replace("/(drawer)/shipment/viewShipment");
       }
        else {
         Toast.show('Unknown', {

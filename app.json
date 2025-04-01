@@ -4,7 +4,7 @@
     "slug": "Shipment-Tracking-Mobile-App",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/Campa_Logo.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -15,7 +15,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/background_color.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.campaui.ShipmentTrackingMobileApp"
     },
     "web": {
       "bundler": "metro",
@@ -37,6 +38,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "9a3549ea-1f7a-4ce2-b05c-121e5cd5b7fb"
+      }
+    },
+    "owner": "campaui"
   }
 }

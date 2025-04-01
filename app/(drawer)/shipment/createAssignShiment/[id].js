@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TextInput } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -7,7 +7,8 @@ import { PaperProvider } from "react-native-paper";
 import { useRouter } from "expo-router";
 import DropdownSelector from "../../../../components/DropdownSelector";
 import { ButtonComponent } from "../../../../components/ButtonComponent";
-
+import { useLocalSearchParams } from 'expo-router';
+import { useApi } from "../../../../hooks/useApi"; // Import your custom hook
 
 // Validation Schema
 const shipmentSchema = yup.object().shape({
@@ -26,14 +27,13 @@ const shipmentSchema = yup.object().shape({
     .required("At least one additional mobile number is required"),
 });
 
-const transportCompanies = [
-  { label: "Company A", value: "Company A" },
-  { label: "Company B", value: "Company B" },
-  { label: "Company C", value: "Company C" },
-];
-
 const CreateAssignShipmentScreen = () => {
   const router = useRouter();
+  const { apiRequest, loading: apiLoading } = useApi();
+  const shipment = useLocalSearchParams();
+  const [transportCompanies, setTransportCompanies] = useState([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
+
   const {
     control,
     handleSubmit,
@@ -51,10 +51,36 @@ const CreateAssignShipmentScreen = () => {
 
   const [additionalMobileNumbers, setAdditionalMobileNumbers] = useState([]);
 
+  // Fetch transport companies on component mount
+  useEffect(() => {
+    const fetchTransportCompanies = async () => {
+      try {
+        const response = await apiRequest('/api/company', 'GET', null, true);
+        const companies = response.CompanyListing.map(company => ({
+          label: company.company_name,
+          value: company._id // Using company ID as the value
+        }));
+        setTransportCompanies(companies);
+      } catch (error) {
+        console.error("Error fetching transport companies:", error);
+      } finally {
+        setLoadingCompanies(false);
+      }
+    };
+
+    fetchTransportCompanies();
+  }, []);
+
   const onSubmit = (data) => {
-    console.log("Shipment Data:", data);
+    console.log("Shipment Data:", {
+      companyId:data.transportCompany,
+      shipmentId: shipment.id 
+    });
+    const payload={
+      companyId:data.transportCompany,
+      shipmentId: shipment.id 
+    }
     // Handle shipment status change to "Assigned"
-    // You can navigate to another screen if needed or update shipment status
     router.push('/shipment/assignShipment');
   };
 
@@ -66,9 +92,11 @@ const CreateAssignShipmentScreen = () => {
     const updatedMobileNumbers = [...additionalMobileNumbers];
     updatedMobileNumbers[index] = value;
     setAdditionalMobileNumbers(updatedMobileNumbers);
-    // Update the form value for additional mobile numbers dynamically
     setValue("additionalMobileNumbers", updatedMobileNumbers);
   };
+
+  // Display shipment number from params if available
+  const displayShipmentNumber = shipment.id ;
 
   return (
     <PaperProvider>
@@ -81,30 +109,47 @@ const CreateAssignShipmentScreen = () => {
             button={styles.addMobileButton}
             buttonText={styles.buttonText}
           />
-           
         </View>
+        
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Shipment Number</Text>
           <View style={styles.readonlyInput}>
-            <Text style={styles.selectedText}>SHIP-1234</Text>
+            <Text style={styles.selectedText}>{displayShipmentNumber}</Text>
           </View>
         </View>
 
         {/* Transport Company Dropdown */}
-        <Controller
-          control={control}
-          name="transportCompany"
-          render={({ field: { value, onChange } }) => (
-            <DropdownSelector
-              label="Transport Company"
-              options={transportCompanies}
-              value={value}
-              setValue={onChange}
-              error={errors.transportCompany?.message}
-            />
-          )}
-        />
+        {loadingCompanies ? (
+          <Text>Loading transport companies...</Text>
+        ) : (
+        
+          <Controller
+            control={control}
+            name="transportCompany"
+            render={({ field: { value, onChange } }) => {
+              const selectedcompany = transportCompanies.find(
+                (company) => company.value === value
+              );
+              return (<DropdownSelector
+                label="Transport Company"
+                options={transportCompanies}
+                value={selectedcompany ? selectedcompany.label : ""}
+                setValue={(val) => {
+                  const selectedcompany = transportCompanies.find(
+                    (company) => company.label === val
+                  );
+                  onChange(selectedcompany ? selectedcompany.value : val);
+                }}
+              
+                error={errors.transportCompany?.message}
+              />
+              )
+            
+            }}
+          />
+        )}
 
+        {/* Rest of your form remains the same */}
         {/* Munshi Mobile Number */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Munshi Mobile Number</Text>
@@ -156,12 +201,14 @@ const CreateAssignShipmentScreen = () => {
           title="Submit"
           onPress={handleSubmit(onSubmit)}
           buttonStyle={styles.submitButton}
+          disabled={apiLoading}
         />
       </View>
     </PaperProvider>
   );
 };
 
+// Your styles remain the same
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#fff" },
   title: { fontSize: 20, fontWeight: "bold" },
@@ -186,12 +233,12 @@ const styles = StyleSheet.create({
   },
   addMobileButton: {
     width: 50,
-    height: 50, // Ensure the button has a proper height
+    height: 50,
     backgroundColor: "#D32F2F",
     paddingVertical: 2,
     borderRadius: 30,
-    alignItems: "center", // Align items horizontally
-    justifyContent: "center", // Center items vertically
+    alignItems: "center",
+    justifyContent: "center",
   },
   inputContainer: { marginBottom: 15 },
   label: { fontSize: 14, fontWeight: "500", marginBottom: 5 },

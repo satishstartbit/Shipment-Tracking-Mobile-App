@@ -1,52 +1,82 @@
-import React, { useState } from "react";
-import { View, FlatList, StyleSheet, Dimensions, Text } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, FlatList, StyleSheet, Dimensions, Text, ActivityIndicator } from "react-native";
 import ShipmentCard from "../../../../components/ShipmentCard";
 import ShipmentDetailsSheet from "../../../../components/ShipmentDetailsSheet";
 import SearchBar from "../../../../components/SearchBar";
 import CreateShipmentButton from "../../../../components/CreateShipmentButton";
 import { useRouter } from "expo-router";
+import { useApi } from "../../../../hooks/useApi";
 
 // Calculate card width based on screen size
 const screenWidth = Dimensions.get("window").width;
 const cardWidth = (screenWidth - 32) / 2 - 8;
 
-// Sample Shipment Data
-const shipments = [
-  {
-    shipmentNumber: "SHP-1001",
-    status: "Planned",
-    truckType: "Medium",
-    destination: { city: "New York", state: "NY" },
-    expectedArrival: "2025-04-10T14:30:00Z",
-  },
-  {
-    shipmentNumber: "SHP-1002",
-    status: "In Transit",
-    truckType: "Large",
-    destination: { city: "Los Angeles", state: "CA" },
-    expectedArrival: "2025-04-12T16:00:00Z",
-  },
-  {
-    shipmentNumber: "SHP-1003",
-    status: "Delivered",
-    truckType: "Small",
-    destination: { city: "Chicago", state: "IL" },
-    expectedArrival: "2025-04-08T10:15:00Z",
-  },
-  {
-    shipmentNumber: "SHP-1004",
-    status: "Planned",
-    truckType: "Large",
-    destination: { city: "Houston", state: "TX" },
-    expectedArrival: "2025-04-15T09:00:00Z",
-  },
-];
-
 const AssignShipment = () => {
   const [visible, setVisible] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [shipments, setShipments] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const router = useRouter();
+  
+  const { apiRequest, loading } = useApi();
+
+  const fetchShipments = useCallback(async (pageNum = 1, search = "", isRefreshing = false) => {
+    try {
+      if (isRefreshing) {
+        setRefreshing(true);
+      }
+      const body = {
+        page_size: 15,
+        page_no: 1,
+        search: "",
+        order: "asc",
+        slug: "logistic_person",
+        userid: "67e636d91a69d6a4496df0db",
+      };
+      const params = new URLSearchParams({
+        page_no: pageNum,
+        page_size: 10,
+        status: "new" // Filter for "new" status shipments only
+      });
+      
+      if (search) {
+        params.append('search', search);
+      }
+
+      const data = await apiRequest(`/shipment/getallshipment`, 'POST', body, true);
+      
+      if (pageNum === 1) {
+        setShipments(data.shipments);
+      } else {
+        setShipments(prev => [...prev, ...data.shipments]);
+      }
+      
+      setTotalPages(data.total_pages);
+      setHasMore(data.has_next);
+      setPage(pageNum);
+    } catch (error) {
+      console.error("Error fetching shipments:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [apiRequest]);
+
+  useEffect(() => {
+    fetchShipments();
+  }, [fetchShipments]);
+
+  useEffect(() => {
+    // Debounce search to avoid too many API calls
+    const timer = setTimeout(() => {
+      fetchShipments(1, searchQuery, false);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, fetchShipments]);
 
   const toggleBottomSheet = (shipment) => {
     setSelectedShipment(shipment);
@@ -54,6 +84,7 @@ const AssignShipment = () => {
   };
 
   const formatDateTime = (isoString) => {
+    if (!isoString) return "Not specified";
     const date = new Date(isoString);
     return date.toLocaleDateString("en-US", {
       month: "short",
@@ -63,22 +94,28 @@ const AssignShipment = () => {
     });
   };
 
-  // Filter shipments to show only "Planned" ones and search based on shipment number, city, or status
-  const filteredShipments = shipments.filter(
-    (shipment) =>
-      shipment.status.toLowerCase() === "planned" &&
-      (shipment.shipmentNumber
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-        shipment.destination.city
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        shipment.status.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const handleLoadMore = () => {
+    if (!loading && hasMore && page < totalPages) {
+      fetchShipments(page + 1, searchQuery);
+    }
+  };
 
-  const handleAssignShipment = () => {
-    // Navigate to the create assign shipment page
-    router.push("/(drawer)/shipment/createAssignShiment");
+  const handleRefresh = () => {
+    fetchShipments(1, searchQuery, true);
+  };
+
+  const handleAssignShipment = (shipmentNumber) => {
+
+    router.push(`/(drawer)/shipment/createAssignShiment/${shipmentNumber}`);
+  };
+
+  const renderFooter = () => {
+    if (!loading || page === 1) return null;
+    return (
+      <View style={styles.footer}>
+        <ActivityIndicator size="small" color="#6430B9" />
+      </View>
+    );
   };
 
   return (
@@ -88,12 +125,21 @@ const AssignShipment = () => {
 
       {/* Shipment List */}
       <FlatList
-        data={filteredShipments}
-        keyExtractor={(item) => item.shipmentNumber}
+        data={shipments}
+        keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
           <ShipmentCard
-            item={item}
-            onPress={toggleBottomSheet}
+            item={{
+              shipmentNumber: item.shipment_number,
+              status: item.shipment_status,
+              truckType: item.truckTypeId?.name || "Not specified",
+              destination: {
+                city: item.destination_city,
+                state: item.destination_state
+              },
+              expectedArrival: item.expected_arrival_date
+            }}
+            onPress={() => toggleBottomSheet(item)}
             cardWidth={cardWidth}
             formatDateTime={formatDateTime}
           />
@@ -102,20 +148,37 @@ const AssignShipment = () => {
         columnWrapperStyle={styles.columnWrapper}
         numColumns={2}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No shipments found</Text>
-          </View>
+          !loading ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No shipments found</Text>
+            </View>
+          ) : null
         }
+        ListFooterComponent={renderFooter}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
       />
 
       {/* Bottom Sheet for Shipment Details */}
       <ShipmentDetailsSheet
         visible={visible}
-        shipment={selectedShipment}
+        shipment={selectedShipment ? {
+          ...selectedShipment,
+          shipmentNumber: selectedShipment.shipment_number,
+          status: selectedShipment.shipment_status,
+          truckType: selectedShipment.truckTypeId?.name || "Not specified",
+          destination: {
+            city: selectedShipment.destination_city,
+            state: selectedShipment.destination_state
+          },
+          expectedArrival: selectedShipment.expected_arrival_date
+        } : null}
         onClose={() => setVisible(false)}
         formatDateTime={formatDateTime}
         isAssignShipment={true}
-        onAssign={handleAssignShipment}
+        onAssign={()=>handleAssignShipment(selectedShipment.shipment_number)}
       />
     </View>
   );
@@ -125,11 +188,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F9F6F2",
-    paddingBottom: 80, // Space for the create button
+    paddingBottom: 10, // Space for the create button
   },
   listContent: {
     paddingHorizontal: 12,
     paddingTop: 12,
+    flexGrow: 1,
   },
   columnWrapper: {
     justifyContent: "space-between",
@@ -144,6 +208,10 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: "#6430B9CC",
+  },
+  footer: {
+    paddingVertical: 20,
+    alignItems: "center",
   },
 });
 

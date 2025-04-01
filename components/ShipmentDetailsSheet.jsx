@@ -5,10 +5,11 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 // Status Colors Mapping
 const statusColors = {
-  Planned: "#FFC107",      
-  "In Transit": "#D32F2F", 
-  Delivered: "#4CAF50",    
-  Confirmed:"#000"
+  new: "#FFC107",
+  "planned": "#D32F2F",
+  Assigned: "#4CAF50",
+  "Gate-In": "#0000FF",
+  Confirmed: "#000",
 };
 
 /**
@@ -31,6 +32,7 @@ const ShipmentDetailsSheet = ({
   onAssign,
   title
 }) => {
+  console.log(shipment,"uuuuuuuuu")
   if (!shipment) return null;
 
   return (
@@ -51,34 +53,34 @@ const ShipmentDetailsSheet = ({
         {/* Shipment Details */}
         <View style={styles.sheetContent}>
           <View style={styles.shipmentHeader}>
-            <Text style={styles.shipmentNumberLarge}>{shipment.shipmentNumber}</Text>
+            <Text style={styles.shipmentNumberLarge}>{shipment.shipmentNumber || shipment.shipment_number}</Text>
             <View
               style={[
                 styles.statusBadgeLarge,
-                { backgroundColor: statusColors[shipment.status] },
+                { backgroundColor: statusColors[shipment.status || shipment.shipment_status ] },
               ]}
             >
-              <Text style={styles.statusTextLarge}>{shipment.status}</Text>
+              <Text style={styles.statusTextLarge}>{shipment.status || shipment.shipment_status}</Text>
             </View>
           </View>
 
           {/* Shipment Info */}
           <View style={styles.detailItem}>
             <MaterialIcons name="local-shipping" size={20} color="#6430B9CC" />
-            <Text style={styles.detailText}>Truck Type: {shipment.truckType}</Text>
+            <Text style={styles.detailText}>Truck Type: {shipment.truckType || shipment.truckTypeId.name}</Text>
           </View>
 
           <View style={styles.detailItem}>
             <MaterialIcons name="place" size={20} color="#6430B9CC" />
             <Text style={styles.detailText}>
-              Destination: {shipment.destination.city}, {shipment.destination.state}
+              Destination: { shipment.destination_city}, { shipment.destination_state}
             </Text>
           </View>
 
           <View style={styles.detailItem}>
             <MaterialIcons name="access-time" size={20} color="#6430B9CC" />
             <Text style={styles.detailText}>
-              Expected: {formatDateTime(shipment.expectedArrival)}
+              Expected: {formatDateTime(shipment.actual_arrival_date) || formatDateTime(shipment.expectedArrival)}
             </Text>
           </View>
 
