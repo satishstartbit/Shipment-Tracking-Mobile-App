@@ -6,6 +6,7 @@ import { Stack } from "expo-router";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../../context/authContext";
 import Toast from "react-native-toast-message";
+import { scaleFont, scalePaddingVertical } from "../../../constants/font";
 
 const LoginScreen = () => {
   const router = useRouter(); // Used for navigation
@@ -169,24 +170,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F9F6F2",
     position: "relative",
   },
-  topRightDesign: {
-    position: "absolute",
-    top: -40,
-    right: -40,
-    width: 150,
-    height: 150,
-    backgroundColor: "#6430B9CC",
-    borderBottomLeftRadius: 100,
-  },
-  bottomLeftDesign: {
-    position: "absolute",
-    bottom: -40,
-    left: -40,
-    width: 150,
-    height: 150,
-    backgroundColor: "#6430B9CC",
-    borderTopRightRadius: 100,
-  },
+ 
   logo: {
     width: 120,
     height: 100,
@@ -230,11 +214,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     marginTop: 10,
+    paddingVertical:scalePaddingVertical(2),
   },
   loginButtonText: {
     color: "#fff",
     fontWeight: "bold",
-    fontSize: 18,
+    fontSize: scaleFont(16),
+    lineHeight: scaleFont(20),
   },
   footerText: {
     textAlign: "center",

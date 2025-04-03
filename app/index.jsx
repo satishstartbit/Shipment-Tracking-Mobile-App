@@ -2,15 +2,15 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useRef } from "react";
 import { Animated, Dimensions, Image, StyleSheet, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import { useAuth } from "../context/authContext";
 import { jwtDecode } from "jwt-decode";
+
+
 
 const { width, height } = Dimensions.get("window");
 
 const SplashScreen = () => {
   const router = useRouter();
-  const cc = useAuth();
-  console.log("cc",cc)
+
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.4)).current;
 
@@ -26,34 +26,35 @@ const SplashScreen = () => {
         duration: 4000,
         useNativeDriver: true,
       }),
-    ]).start(async () => {
-      // Redirect to login after animation completes
-
+    ]).start();
+  
+    const checkAuth = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 4000)); // Delay to ensure splash screen shows
+  
       const token = await SecureStore.getItemAsync("authToken");
       const role = await SecureStore.getItemAsync("uRole");
       const uid = await SecureStore.getItemAsync("uid");
-   
+  
       if (token && role && uid) {
         const decoded = jwtDecode(token);
         const currentTime = Math.floor(Date.now() / 1000);
   
-        if(decoded.exp < currentTime){
-          const removeDataStore=async()=>{
-                await SecureStore.deleteItemAsync("authToken");
-                await SecureStore.deleteItemAsync("uRole");
-                await SecureStore.deleteItemAsync("uid");
-
-          }
-          removeDataStore();
+        if (decoded.exp < currentTime) {
+          await SecureStore.deleteItemAsync("authToken");
+          await SecureStore.deleteItemAsync("uRole");
+          await SecureStore.deleteItemAsync("uid");
           router.replace("/(auth)/login");
+        } else {
+          router.replace("/(drawer)");
         }
-        router.replace("/(drawer)");
-      }
-      else{
+      } else {
         router.replace("/(auth)/login");
       }
-    });
+    };
+  
+    checkAuth();
   }, [opacity, scale, router]);
+  
 
   return (
     <View style={styles.container}>

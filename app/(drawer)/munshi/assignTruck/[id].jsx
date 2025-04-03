@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,15 +6,19 @@ import {
   TextInput,
   TouchableOpacity,
   Platform,
+  Alert,
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { PaperProvider } from "react-native-paper";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { ButtonComponent } from "../../../../components/ButtonComponent";
-
+import { useApi } from "../../../../hooks/useApi";
+import * as SecureStore from "expo-secure-store";
+import { jwtDecode } from "jwt-decode";
+import ModalComponent from "../../../../components/ModalComponent";
 // Validation Schema
 const shipmentSchema = yup.object().shape({
   truckNumber: yup.string().required("Truck number is required"),
@@ -23,10 +27,11 @@ const shipmentSchema = yup.object().shape({
     .string()
     .matches(/^[0-9]{10}$/, "Mobile number must be exactly 10 digits")
     .required("Driver mobile number is required"),
-  plannedArrival: yup.date().required("Planned arrival date is required"),
 });
 
 const AssignShipmentScreen = () => {
+  const { apiRequest, loading: apiLoading } = useApi();
+  const shipmentId = useLocalSearchParams();
   const router = useRouter();
   const {
     control,
@@ -47,7 +52,8 @@ const AssignShipmentScreen = () => {
   const [selectedTime, setSelectedTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-
+  const [isSheetVisible, setIsSheetVisible] = useState(false);
+  const [shipmentData, setShipmentData] = useState({});
   // Handle Date Selection
   const handleDateConfirm = (event, date) => {
     setShowDatePicker(false);
@@ -65,15 +71,67 @@ const AssignShipmentScreen = () => {
     }
   };
 
-  const onSubmit = (data) => {
-    console.log("Shipment Assigned:", {
-      ...data,
-      plannedArrivalDate: selectedDate.toLocaleDateString(),
-      plannedArrivalTime: selectedTime.toLocaleTimeString(),
-    });
-    router.push("/munshi/viewShipment");
-  };
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const storedToken = await SecureStore.getItemAsync("authToken");
+        const storedRole = await SecureStore.getItemAsync("uRole");
 
+        // If no token or role is found, redirect immediately
+        if (!storedToken || !storedRole) {
+          router.replace("/(auth)/login");
+          return;
+        }
+
+        // Decode the token and check expiration
+        const decoded = jwtDecode(storedToken);
+        const currentTime = Math.floor(Date.now() / 1000);
+
+        if (decoded.exp < currentTime) {
+          // Clear SecureStore before redirecting
+          await SecureStore.deleteItemAsync("authToken");
+          await SecureStore.deleteItemAsync("uRole");
+          await SecureStore.deleteItemAsync("uid");
+
+          router.replace("/(auth)/login");
+        }
+      } catch (error) {
+        console.error("Error validating token:", error);
+        router.replace("/(auth)/login"); // Redirect on any error
+      }
+    };
+
+    checkToken();
+  }, []);
+  const onSubmit = async (data) => {
+    console.log("yess");
+    try {
+      const payload = {
+        driver_name: data.driverName,
+        mobile_number: data.driverMobile,
+        truck_number: data.truckNumber,
+        created_by: await SecureStore.getItemAsync("uid"),
+        shipmentId: shipmentId.id,
+      };
+
+      console.log("pay", payload);
+
+      const response = await apiRequest(
+        "/shipment/createtruck",
+        "POST",
+        payload
+      );
+      if (response) {
+        setShipmentData({
+          shipment_number: response.shipment.shipment_number,
+          shipment_status: response.shipment.shipment_status,
+        });
+        setIsSheetVisible(true);
+      }
+    } catch (error) {
+      console.error("Error creating shipment:", error);
+    }
+  };
   return (
     <PaperProvider>
       <View style={styles.container}>
@@ -155,7 +213,7 @@ const AssignShipmentScreen = () => {
           {showDatePicker && (
             <DateTimePicker
               value={selectedDate}
-              mode="date" // ✅ Only date
+              mode="date"
               display={Platform.OS === "android" ? "calendar" : "spinner"}
               onChange={handleDateConfirm}
             />
@@ -177,7 +235,7 @@ const AssignShipmentScreen = () => {
           {showTimePicker && (
             <DateTimePicker
               value={selectedTime}
-              mode="time" 
+              mode="time"
               display={Platform.OS === "android" ? "clock" : "spinner"}
               onChange={handleTimeConfirm}
             />
@@ -187,8 +245,19 @@ const AssignShipmentScreen = () => {
         {/* Submit Button */}
         <ButtonComponent
           title="Submit"
-          onPress={handleSubmit(onSubmit)}
+          onPress={() => {
+            console.log("Submit button pressed");
+            handleSubmit(onSubmit)();
+          }}
           buttonStyle={styles.submitButton}
+          disabled={apiLoading}
+          loading={apiLoading}
+        />
+        <ModalComponent
+          visible={isSheetVisible}
+          onClose={() => setIsSheetVisible(false)}
+          shipment={shipmentData}
+          redirectTo="/munshi/viewShipment" // 🚀 Pass the screen to navigate to
         />
       </View>
     </PaperProvider>
@@ -216,7 +285,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 10,
     backgroundColor: "#f8f8f8",
-
   },
   datePickerText: { fontSize: 16, color: "#000" },
   submitButton: {

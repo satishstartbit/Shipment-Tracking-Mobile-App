@@ -3,13 +3,13 @@ import { View, FlatList, StyleSheet, Dimensions, Text, ActivityIndicator } from 
 import ShipmentCard from "../../../../components/ShipmentCard";
 import ShipmentDetailsSheet from "../../../../components/ShipmentDetailsSheet";
 import SearchBar from "../../../../components/SearchBar";
-import CreateShipmentButton from "../../../../components/CreateShipmentButton";
 import { useRouter } from "expo-router";
 import { useApi } from "../../../../hooks/useApi";
-
+import * as SecureStore from "expo-secure-store";
+import { jwtDecode } from "jwt-decode";
 // Calculate card width based on screen size
 const screenWidth = Dimensions.get("window").width;
-const cardWidth = (screenWidth - 32) / 2 - 8;
+const cardWidth = (screenWidth - 32) ;
 
 const AssignShipment = () => {
   const [visible, setVisible] = useState(false);
@@ -29,41 +29,83 @@ const AssignShipment = () => {
       if (isRefreshing) {
         setRefreshing(true);
       }
+  
+      // Get dynamic values from SecureStore
+      const [slug, userid] = await Promise.all([
+        SecureStore.getItemAsync("uRole"),
+        SecureStore.getItemAsync("uid")
+      ]);
+  
       const body = {
         page_size: 15,
-        page_no: 1,
-        search: "",
-        order: "asc",
-        slug: "logistic_person",
-        userid: "67e636d91a69d6a4496df0db",
-      };
-      const params = new URLSearchParams({
         page_no: pageNum,
-        page_size: 10,
-        status: "new" // Filter for "new" status shipments only
-      });
-      
-      if (search) {
-        params.append('search', search);
-      }
+        search: search,
+        order: "asc",
+        slug: slug, // Fallback to default if not found
+        userid: userid , // Fallback to default if not found
+      };
+  
+      const data = await apiRequest(`/shipment/getallshipment`, "POST", body, true);
+  
 
-      const data = await apiRequest(`/shipment/getallshipment`, 'POST', body, true);
-      
+      const plannedShipments = (data.shipments || []).filter(
+        (shipment) => shipment.shipment_status === "Planned"
+      );
+  
       if (pageNum === 1) {
-        setShipments(data.shipments);
+        setShipments(plannedShipments);
       } else {
-        setShipments(prev => [...prev, ...data.shipments]);
+        setShipments(prev => [...prev, ...plannedShipments]);
       }
-      
-      setTotalPages(data.total_pages);
-      setHasMore(data.has_next);
+  
+      setTotalPages(data.total_pages || 1);
+      setHasMore(data.has_next || false);
       setPage(pageNum);
     } catch (error) {
       console.error("Error fetching shipments:", error);
+      if (pageNum === 1) {
+        setShipments([]);
+      }
     } finally {
       setRefreshing(false);
     }
   }, [apiRequest]);
+  
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const storedToken = await SecureStore.getItemAsync("authToken");
+        const storedRole = await SecureStore.getItemAsync("uRole");
+  
+  
+        // If no token or role is found, redirect immediately
+        if (!storedToken || !storedRole) {
+          router.replace("/(auth)/login");
+          return;
+        }
+  
+        // Decode the token and check expiration
+        const decoded = jwtDecode(storedToken);
+        const currentTime = Math.floor(Date.now() / 1000);
+        
+
+  
+        if (decoded.exp < currentTime) {
+          // Clear SecureStore before redirecting
+          await SecureStore.deleteItemAsync("authToken");
+          await SecureStore.deleteItemAsync("uRole");
+          await SecureStore.deleteItemAsync("uid");
+  
+          router.replace("/(auth)/login");
+        }
+      } catch (error) {
+        console.error("Error validating token:", error);
+        router.replace("/(auth)/login"); // Redirect on any error
+      }
+    };
+  
+    checkToken();
+  }, []);
 
   useEffect(() => {
     fetchShipments();
@@ -104,10 +146,10 @@ const AssignShipment = () => {
     fetchShipments(1, searchQuery, true);
   };
 
-  const handleAssignShipment = (shipmentNumber) => {
-
-    router.push(`/(drawer)/shipment/createAssignShiment/${shipmentNumber}`);
+  const handleAssignShipment = (shipmentNumber, shipId) => {
+    router.push(`/(drawer)/shipment/createAssignShiment/${shipmentNumber}_${shipId}`);
   };
+  console.log("ps",shipments)
 
   const renderFooter = () => {
     if (!loading || page === 1) return null;
@@ -145,8 +187,8 @@ const AssignShipment = () => {
           />
         )}
         contentContainerStyle={styles.listContent}
-        columnWrapperStyle={styles.columnWrapper}
-        numColumns={2}
+
+      
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyContainer}>
@@ -178,7 +220,7 @@ const AssignShipment = () => {
         onClose={() => setVisible(false)}
         formatDateTime={formatDateTime}
         isAssignShipment={true}
-        onAssign={()=>handleAssignShipment(selectedShipment.shipment_number)}
+        onAssign={() => handleAssignShipment(selectedShipment?.shipment_number, selectedShipment?._id)}
       />
     </View>
   );
@@ -188,7 +230,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F9F6F2",
-    paddingBottom: 10, // Space for the create button
+    paddingBottom: 10,
   },
   listContent: {
     paddingHorizontal: 12,
@@ -197,7 +239,7 @@ const styles = StyleSheet.create({
   },
   columnWrapper: {
     justifyContent: "space-between",
-    marginBottom: 8, // Add vertical gap between rows
+    marginBottom: 8,
   },
   emptyContainer: {
     flex: 1,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TextInput } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -6,7 +6,8 @@ import * as yup from "yup";
 import { PaperProvider } from "react-native-paper";
 import { useRouter } from "expo-router";
 import { ButtonComponent } from "../../../../components/ButtonComponent"; // Assuming you have the ButtonComponent
-
+import * as SecureStore from "expo-secure-store";
+import { jwtDecode } from "jwt-decode";
 // Validation Schema for Doc Number
 const docNumberSchema = yup.object().shape({
   docNumber: yup
@@ -28,8 +29,44 @@ const AssignDocNumberScreen = () => {
     },
   });
 
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const storedToken = await SecureStore.getItemAsync("authToken");
+        const storedRole = await SecureStore.getItemAsync("uRole");
+  
+  
+        // If no token or role is found, redirect immediately
+        if (!storedToken || !storedRole) {
+          router.replace("/(auth)/login");
+          return;
+        }
+  
+        // Decode the token and check expiration
+        const decoded = jwtDecode(storedToken);
+        const currentTime = Math.floor(Date.now() / 1000);
+        
+
+  
+        if (decoded.exp < currentTime) {
+          // Clear SecureStore before redirecting
+          await SecureStore.deleteItemAsync("authToken");
+          await SecureStore.deleteItemAsync("uRole");
+          await SecureStore.deleteItemAsync("uid");
+  
+          router.replace("/(auth)/login");
+        }
+      } catch (error) {
+        console.error("Error validating token:", error);
+        router.replace("/(auth)/login"); // Redirect on any error
+      }
+    };
+  
+    checkToken();
+  }, []);
+
   const onSubmit = (data) => {
-    console.log("Doc Number Data:", data);
+
     // Handle submission of doc number and any logic related to assigning shipment
     router.push('/docNumber/viewDocShipment'); // Adjust the route if needed
   };

@@ -1,11 +1,12 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, FlatList, StyleSheet, Dimensions, Text, Button } from "react-native";
 import ShipmentCard from "../../../../components/ShipmentCard";
 import ShipmentDetailsSheet from "../../../../components/ShipmentDetailsSheet";
 import SearchBar from "../../../../components/SearchBar";
 import CreateShipmentButton from "../../../../components/CreateShipmentButton";
 import { useRouter } from "expo-router";
-
+import * as SecureStore from "expo-secure-store";
+import { jwtDecode } from "jwt-decode";
 // Calculate card width based on screen size
 const screenWidth = Dimensions.get("window").width;
 const cardWidth = (screenWidth - 32) / 2 - 8;
@@ -48,6 +49,42 @@ const docShipmentListScreen = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const storedToken = await SecureStore.getItemAsync("authToken");
+        const storedRole = await SecureStore.getItemAsync("uRole");
+  
+  
+        // If no token or role is found, redirect immediately
+        if (!storedToken || !storedRole) {
+          router.replace("/(auth)/login");
+          return;
+        }
+  
+        // Decode the token and check expiration
+        const decoded = jwtDecode(storedToken);
+        const currentTime = Math.floor(Date.now() / 1000);
+        
+
+  
+        if (decoded.exp < currentTime) {
+          // Clear SecureStore before redirecting
+          await SecureStore.deleteItemAsync("authToken");
+          await SecureStore.deleteItemAsync("uRole");
+          await SecureStore.deleteItemAsync("uid");
+  
+          router.replace("/(auth)/login");
+        }
+      } catch (error) {
+        console.error("Error validating token:", error);
+        router.replace("/(auth)/login"); // Redirect on any error
+      }
+    };
+  
+    checkToken();
+  }, []);
+
   const toggleBottomSheet = (shipment) => {
     setSelectedShipment(shipment);
     setVisible(!visible);
@@ -78,7 +115,6 @@ const docShipmentListScreen = () => {
 
   const handleAssignDoc = () => {
     // Logic to assign the document number
-    console.log("Assigning Doc Number for shipment:", selectedShipment.shipmentNumber);
     router.navigate("/(drawer)/docNumber/assignDocNumber")
   };
 

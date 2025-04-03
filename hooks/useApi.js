@@ -20,19 +20,19 @@ export const useApi = () => {
     async (endpoint, method = "GET", body = null, authRequired = true) => {
       setLoading(true);
       setError(null);
-
+       console.log("harsh",body)
       try {
         let headers = {
           "Content-Type": "application/json",
         };
 
         if (authRequired) {
-          console.log("in");
+
           const token = await SecureStore.getItemAsync("authToken");
-          console.log("log....", token);
+
           if (token) {
             headers["authorization"] = `${token}`;
-            console.log("hheder", headers);
+
           }
         }
 
@@ -43,7 +43,7 @@ export const useApi = () => {
         });
 
         const data = await response.json();
-        console.log("datttt", data);
+
 
         if (!response.ok) {
           throw new Error(data.message || "Request failed");
@@ -71,4 +71,6 @@ export const useApi = () => {
 
   return { apiRequest, loading, error };
 };
+
+
 

@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useApi } from "../hooks/useApi";
 import * as SecureStore from "expo-secure-store";
 import Toast from 'react-native-root-toast';
+import { jwtDecode } from "jwt-decode";
 
 export const Role = {
   ADMIN: "admin",
@@ -37,13 +38,13 @@ export const AuthProvider = ({ children }) => {
       const currentTime = Math.floor(Date.now() / 1000);
 
       if (decoded.exp < currentTime) {
-        console.log("Token expired. Logging out...");
+
         await SecureStore.deleteItemAsync("authToken");
         await SecureStore.deleteItemAsync("uRole");
         await SecureStore.deleteItemAsync("uid");
         router.replace("/(auth)/login");
       } else {
-        setUser(decoded);
+        router.replace("/(drawer)/");
       }
     } catch (error) {
       console.error("Error checking token:", error);
@@ -77,7 +78,7 @@ export const AuthProvider = ({ children }) => {
       });
 
       // const data = await response.json();
-      console.log("data", response);
+
 
       if (!response) {
         throw new Error(error || "Login failed");
@@ -86,11 +87,11 @@ export const AuthProvider = ({ children }) => {
       await SecureStore.setItemAsync("authToken", response.accessToken);
       await SecureStore.setItemAsync("uRole",response.roles.slug);
       await SecureStore.setItemAsync("uid",response.user._id);
-      // console.log("data true",data)
+  
 
       // Check user role from API response
       if (response.roles.slug === "security_gaurd") {
-        console.log("Admin logged in",response.roles.slug);
+   
         setAuthState({
           authenticated: true,
           username: username,
@@ -98,7 +99,7 @@ export const AuthProvider = ({ children }) => {
         });
         router.replace("/(drawer)/security/viewSecurityShipment");
       } else if (response.roles.slug === "Munshi") {
-        console.log("User logged in");
+
         setAuthState({
           authenticated: true,
           username: username,
@@ -106,7 +107,7 @@ export const AuthProvider = ({ children }) => {
         });
         router.replace("/(drawer)/munshi/viewShipment");
       } else if (response.roles.slug === "logistic_person") {
-        console.log("logistic logged in");
+
         setAuthState({
           authenticated: true,
           username: username,
@@ -135,7 +136,7 @@ export const AuthProvider = ({ children }) => {
       throw new Error("sign out failed" || response.error);
     }
 
-    console.log("helo", response);
+
     await SecureStore.deleteItemAsync("authToken");
     await SecureStore.deleteItemAsync("uRole");
 

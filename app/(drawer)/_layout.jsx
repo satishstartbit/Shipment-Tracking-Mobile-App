@@ -45,10 +45,9 @@ const CustomDrawerContent = (props) => {
     getRole();
   }, []);
 
-  console.log("User Role:", role);
+
 
   const handleLogout = async () => {
-    console.log("User Logged Out");
 
     setLoading(true); // Start loading
     try {
@@ -148,12 +147,9 @@ export default function AppLayout() {
         const storedToken = await SecureStore.getItemAsync("authToken");
         const storedRole = await SecureStore.getItemAsync("uRole");
   
-        console.log("Stored Token:", storedToken);
-        console.log("Stored Role:", storedRole);
   
         // If no token or role is found, redirect immediately
         if (!storedToken || !storedRole) {
-          console.log("No token or role found. Redirecting to login...");
           router.replace("/(auth)/login");
           return;
         }
@@ -162,12 +158,9 @@ export default function AppLayout() {
         const decoded = jwtDecode(storedToken);
         const currentTime = Math.floor(Date.now() / 1000);
         
-        console.log("Token Expiry Time:", decoded.exp);
-        console.log("Current Time:", currentTime);
+
   
         if (decoded.exp < currentTime) {
-          console.log("Token expired. Clearing data and redirecting...");
-  
           // Clear SecureStore before redirecting
           await SecureStore.deleteItemAsync("authToken");
           await SecureStore.deleteItemAsync("uRole");

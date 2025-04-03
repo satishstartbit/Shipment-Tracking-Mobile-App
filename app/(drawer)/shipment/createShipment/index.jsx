@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  TextInput,
+} from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -9,24 +16,50 @@ import DropdownSelector from "../../../../components/DropdownSelector";
 import { ButtonComponent } from "../../../../components/ButtonComponent";
 import { useApi } from "../../../../hooks/useApi";
 import * as SecureStore from "expo-secure-store";
-
+import {
+  scaleFont,
+  scalePadding,
+  scalePaddingHorizontal,
+  scalePaddingVertical,
+} from "../../../../constants/font";
+import ShipmentDetailsSheet from "../../../../components/ShipmentDetailsSheet";
+import ModalComponent from "../../../../components/ModalComponent";
+import { jwtDecode } from "jwt-decode";
 // Validation Schema
 const shipmentSchema = yup.object().shape({
   truckType: yup.string().required("Truck type is required"),
   destinationCity: yup.string().required("Destination city is required"),
+  destinationState: yup.string().required("Destination state is required"),
+
 });
 
-const cities = [
+const countries = [
+  { label: "USA", value: "USA" },
+  { label: "Canada", value: "Canada" },
+  { label: "Mexico", value: "Mexico" },
+];
+
+const states = [
+  { label: "California", value: "California" },
   { label: "New York", value: "New York" },
+  { label: "Texas", value: "Texas" },
+];
+
+const cities = [
   { label: "Los Angeles", value: "Los Angeles" },
-  { label: "Chicago", value: "Chicago" },
+  { label: "New York City", value: "New York City" },
+  { label: "Houston", value: "Houston" },
 ];
 
 const CreateShipmentScreen = () => {
   const router = useRouter();
-  const { apiRequest, loading } = useApi();
+  const { apiRequest, loading:apiLoading } = useApi();
   const [truckTypes, setTruckTypes] = useState([]);
   const [loadingTrucks, setLoadingTrucks] = useState(true);
+  const [isSheetVisible, setIsSheetVisible] = useState(false);
+  const [shipmentData, setShipmentData] = useState({});
+  const [shipmentNumber, setShipmentNumber] = useState("");
+  const [shipmentId, setShipmentId] = useState("");
 
   const {
     control,
@@ -46,15 +79,15 @@ const CreateShipmentScreen = () => {
           "/shipment/getalltrucktype",
           "GET",
           null,
-          false
+          true
         );
-        console.log("r30", response);
+
         if (response) {
           const formattedTrucks = response.truckTypes.map((truck) => ({
             label: truck.name,
             value: truck._id,
           }));
-          console.log("formattedTrucks", formattedTrucks);
+
           setTruckTypes(formattedTrucks);
         }
       } catch (error) {
@@ -64,28 +97,93 @@ const CreateShipmentScreen = () => {
       }
     };
 
+    const fetchShipmentNumber = async () => {
+      try {
+        const payload = { userId: await SecureStore.getItemAsync("uid") };
+        console.log("uid", payload);
+        const response = await apiRequest(
+          "/shipment/createshipmentnumber",
+          "POST",
+          payload,
+          true
+        );
+
+        if (response) {
+          console.log("");
+          setShipmentId(response.shipment._id);
+          setShipmentNumber(response.shipment.shipment_number);
+        }
+      } catch (error) {
+        console.error("Error fetching shipment number:", error);
+      }
+    };
+
+    fetchShipmentNumber();
     fetchTruckTypes();
+  }, []);
+
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const storedToken = await SecureStore.getItemAsync("authToken");
+        const storedRole = await SecureStore.getItemAsync("uRole");
+  
+  
+        // If no token or role is found, redirect immediately
+        if (!storedToken || !storedRole) {
+          router.replace("/(auth)/login");
+          return;
+        }
+  
+        // Decode the token and check expiration
+        const decoded = jwtDecode(storedToken);
+        const currentTime = Math.floor(Date.now() / 1000);
+        
+
+  
+        if (decoded.exp < currentTime) {
+          // Clear SecureStore before redirecting
+          await SecureStore.deleteItemAsync("authToken");
+          await SecureStore.deleteItemAsync("uRole");
+          await SecureStore.deleteItemAsync("uid");
+  
+          router.replace("/(auth)/login");
+        }
+      } catch (error) {
+        console.error("Error validating token:", error);
+        router.replace("/(auth)/login"); // Redirect on any error
+      }
+    };
+  
+    checkToken();
   }, []);
 
   const onSubmit = async (data) => {
     try {
+      console.log("ddddadda", data);
       const payload = {
         shipment_status: "planned",
         destination_city: data.destinationCity,
-        truck_type: data.truckType,
+        destination_state: data.destinationState,
+        truckTypeId: data.truckType,
+        shipment_id: shipmentId,
         userid: await SecureStore.getItemAsync("uid"),
       };
 
-      console.log("payload", payload);
-
+      console.log("pay", payload);
       const response = await apiRequest(
         "/shipment/createshipment",
         "POST",
         payload
       );
-      console.log("cRE", response);
-      Alert.alert("Success", "Shipment created successfully!");
-      router.push("/shipment/viewShipment");
+
+      if (response) {
+        setShipmentData({
+          shipment_number: response.shipment.shipment_number,
+          shipment_status: response.shipment.shipment_status,
+        });
+        setIsSheetVisible(true);
+      }
     } catch (error) {
       console.error("Error creating shipment:", error);
     }
@@ -98,11 +196,16 @@ const CreateShipmentScreen = () => {
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Shipment Number</Text>
-          <View style={styles.readonlyInput}>
-            <Text style={styles.selectedText}>SHIP-1234</Text>
-          </View>
+          {shipmentNumber ? (
+            <TextInput
+              style={styles.readonlyInput}
+              value={shipmentNumber}
+              editable={false}
+            />
+          ) : (
+            <ActivityIndicator size="small" color="#E53935" />
+          )}
         </View>
-
         {/* Truck Type Dropdown */}
         {loadingTrucks ? (
           <ActivityIndicator size="small" color="#E53935" />
@@ -134,6 +237,20 @@ const CreateShipmentScreen = () => {
           />
         )}
 
+        <Controller
+          control={control}
+          name="destinationState"
+          render={({ field: { value } }) => (
+            <DropdownSelector
+              label="Destination State"
+              options={states}
+              value={value}
+              setValue={(val) => setValue("destinationState", val)}
+              error={errors.destinationState?.message}
+            />
+          )}
+        />
+
         {/* Destination City Dropdown */}
         <Controller
           control={control}
@@ -151,10 +268,18 @@ const CreateShipmentScreen = () => {
 
         {/* Submit Button */}
         <ButtonComponent
-          title={loading ? "Submitting..." : "Submit"}
+          title={ "Submit"}
           onPress={handleSubmit(onSubmit)}
           buttonStyle={styles.submitButton}
-          disabled={loading}
+          disabled={apiLoading}
+          loading={apiLoading}
+        />
+
+        <ModalComponent
+          visible={isSheetVisible}
+          onClose={() => setIsSheetVisible(false)}
+          shipment={shipmentData}
+          redirectTo="/shipment/assignShipment" // 🚀 Pass the screen to navigate to
         />
       </View>
     </PaperProvider>
@@ -162,22 +287,22 @@ const CreateShipmentScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  title: { fontSize: 20, fontWeight: "bold", marginBottom: 15 },
+  container: { flex: 1, padding: scalePadding(20), backgroundColor: "#fff" },
+  title: { fontSize: scaleFont(20), fontWeight: "bold", marginBottom: 15 },
   submitButton: {
     backgroundColor: "#E53935",
-    paddingVertical: 14,
+    paddingVertical: scalePaddingVertical(14),
     borderRadius: 30,
     alignItems: "center",
   },
   inputContainer: { marginBottom: 15 },
-  label: { fontSize: 14, fontWeight: "500", marginBottom: 5 },
+  label: { fontSize: scaleFont(14), fontWeight: "500", marginBottom: 5 },
   readonlyInput: {
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
+    paddingVertical: scalePaddingVertical(14),
+    paddingHorizontal: scalePaddingHorizontal(12),
     backgroundColor: "#f8f8f8",
   },
   selectedText: { color: "#000" },
